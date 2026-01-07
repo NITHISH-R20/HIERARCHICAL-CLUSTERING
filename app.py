@@ -1,80 +1,46 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-
 from sklearn.datasets import load_wine
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import DBSCAN
 
-# --------------------------------
+# -----------------------------
 # Page Configuration
-# --------------------------------
-st.set_page_config(page_title="Wine Clustering App", layout="centered")
+# -----------------------------
+st.set_page_config(page_title="Clustering App")
 
-st.title("🍷 Wine Clustering using DBSCAN")
-st.write("Clustering on built-in Wine dataset (No CSV upload required)")
+st.title("🍷 Wine Clustering App")
+st.write("Simple Input → Output Interface")
 
-# --------------------------------
-# Load Built-in Dataset
-# --------------------------------
+# -----------------------------
+# Load & Prepare Dataset (Hidden)
+# -----------------------------
 wine = load_wine()
-df = pd.DataFrame(wine.data, columns=wine.feature_names)
-
-st.subheader("📊 Dataset Preview")
-st.dataframe(df.head())
-
-st.write("Dataset Shape:", df.shape)
-
-# --------------------------------
-# Standardization
-# --------------------------------
-st.subheader("⚙️ Standardization")
+X = wine.data
 
 scaler = StandardScaler()
-scaled_data = scaler.fit_transform(df)
-scaled_df = pd.DataFrame(scaled_data, columns=df.columns)
+X_scaled = scaler.fit_transform(X)
 
-st.write("Standardized Data (Preview)")
-st.dataframe(scaled_df.head())
+# -----------------------------
+# User Inputs
+# -----------------------------
+st.subheader("🔧 Enter DBSCAN Parameters")
 
-# --------------------------------
-# DBSCAN Parameters
-# --------------------------------
-st.subheader("🔧 DBSCAN Parameters")
+eps = st.number_input("Enter eps value", min_value=0.1, max_value=10.0, value=2.0, step=0.1)
+min_samples = st.number_input("Enter min_samples", min_value=1, max_value=20, value=2)
 
-eps = st.slider("Select eps value", 0.1, 5.0, 2.0, 0.1)
-min_samples = st.slider("Select min_samples", 1, 10, 2)
+# -----------------------------
+# Button Action
+# -----------------------------
+if st.button("Run Clustering"):
+    model = DBSCAN(eps=eps, min_samples=min_samples)
+    labels = model.fit_predict(X_scaled)
 
-# --------------------------------
-# Apply DBSCAN
-# --------------------------------
-dbscan = DBSCAN(eps=eps, min_samples=min_samples)
-clusters = dbscan.fit_predict(scaled_df)
+    unique_clusters = set(labels)
+    noise_count = list(labels).count(-1)
 
-df["Cluster"] = clusters
+    st.subheader("📌 Output")
 
-st.subheader("📌 Cluster Results")
-st.write(df["Cluster"].value_counts())
-
-st.dataframe(df.head())
-
-# --------------------------------
-# Visualization
-# --------------------------------
-st.subheader("📈 Cluster Visualization")
-
-x_feature = st.selectbox("Select X-axis feature", wine.feature_names)
-y_feature = st.selectbox("Select Y-axis feature", wine.feature_names, index=1)
-
-fig, ax = plt.subplots()
-sns.scatterplot(
-    x=df[x_feature],
-    y=df[y_feature],
-    hue=df["Cluster"],
-    palette="tab10",
-    ax=ax
-)
-
-ax.set_title("DBSCAN Clustering Result")
-st.pyplot(fig)
+    st.write("Total Clusters Found:", len(unique_clusters) - (1 if -1 in unique_clusters else 0))
+    st.write("Noise Points:", noise_count)
+    st.write("Total Data Points:", len(labels))
